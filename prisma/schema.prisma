@@ -1,0 +1,64 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id                Int           @id @default(autoincrement())
+  name        String      
+  email             String        @unique
+  password          String 
+  address           String
+  gender            String
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  apartments        Apartment[]   @relation("AdminApartments") // Admin creates apartments
+}
+
+model Agent {
+  id                Int           @id @default(autoincrement())
+  name              String
+  email             String        @unique
+  address           String
+  password          String
+  phone_number      String        @unique
+  bank_name         String       
+  account_number    String        @unique
+  gender            String
+  status            AgentStatus   @default(UNVERIFIED)
+  apartment        Apartment[]     @relation("AgentApartments") // Agents list apartments
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+model Apartment {
+  id          Int       @id @default(autoincrement())
+  name        String  
+  address     String
+  type        String
+  servicing   String
+  bedroom     String
+  price       Int
+  images      String[]  @default([])
+  createdBy   Admin     @relation("AdminApartments", fields: [adminId], references: [id]) // Admin ownership
+  adminId     Int  
+
+  agents      Agent[]   @relation("AgentApartments") // Agents listing this apartment
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+enum AgentStatus {
+  VERIFIED
+  UNVERIFIED
+}
