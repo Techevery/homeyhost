@@ -1,20 +1,19 @@
-import { Router } from "express";
-import { verifyAgent, createApartment } from "../handler/Admin";
+import express from "express";
+import {
+  verifyAgent,
+  createApartment,
+  listProperties,
+  listAgents,
+} from "../handler/Admin";
 import { authenticateAdmin } from "../middlewares/Admin";
 
-class AdminRoutes {
-  public route: Router;
+const router = express.Router();
 
-  constructor() {
-    this.route = Router();
-    this.initializeRoutes();
-  }
+router.post("/upload-property", authenticateAdmin, createApartment);
 
-  private initializeRoutes(): void {
-    this.route
-    .post("/add-property", authenticateAdmin, createApartment)
-    .put("/verify-agent", authenticateAdmin, verifyAgent)
-  }
-}
+router.put("/verify-agent", authenticateAdmin, verifyAgent);
 
-export default new AdminRoutes();
+router.get("/list-apartments", authenticateAdmin, listProperties);
+router.get("/list-agents", listAgents);
+
+export default router;

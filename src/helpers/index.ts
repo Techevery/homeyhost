@@ -3,17 +3,27 @@ import bcrypt from "bcryptjs";
 import { error as logError } from "./logger";
 
 export default class Helper {
-  static signToken(payload:any):{token:string}{
-    const token = jwt.sign(payload, (<any>process.env).APP_KEY,{
+  private static getSecretKey():string {
+    const secret = process.env.APP_KEY;
+
+    if(!secret){
+      throw new Error("APP_KEY environment variable is not set");
+    }
+
+    return secret;
+  };
+
+  static signToken(payload:any):string{
+    const token = jwt.sign(payload, this.getSecretKey(),{
       expiresIn:"7d",
     });
 
-    return {token};
+    return token;
   }
 
   static verifyToken(payload:any):any{
     try {
-      const decodedToken = jwt.verify(payload, (<any>process.env).APP_KEY);
+      const decodedToken = jwt.verify(payload,this.getSecretKey());
 
       if(typeof decodedToken === "object"){
         return decodedToken;

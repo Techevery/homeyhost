@@ -9,7 +9,7 @@ const successResponse = new SuccessResponse();
 const errorResponse = new ErrorResponse();
 type RequestHandler = (req: Request, res: Response) => Promise<Response>;
 
-export const createAgent = async (req: Request, res: Response)=> {
+export const createAgent = async (req: Request, res: Response):Promise<void> => {
   try {
     const {
       name,
@@ -21,6 +21,28 @@ export const createAgent = async (req: Request, res: Response)=> {
       bank_name,
       account_number,
     } = req.body;
+
+    if (
+      !name ||
+      !email ||
+      !password ||
+      !address ||
+      !gender ||
+      !phone_number ||
+      !bank_name ||
+      !account_number
+    ) {
+      errorResponse.sendErrorResponse(
+        res,
+        null,
+        "Missing Required Parameters",
+        HttpStatusCode.HTTP_BAD_REQUEST
+      );
+    }
+
+    // if (!email) {
+    //   throw new Error("Email is required to find the agent.");
+    // }
 
     const existingAccount = await prisma.agent.findUnique({
       where: { email },
@@ -60,6 +82,8 @@ export const createAgent = async (req: Request, res: Response)=> {
       "Account Created Successfully",
       HttpStatusCode.HTTP_CREATED
     );
+
+    // res.status(201).json({ message: "Agent created successfully.", data:agentDataWithoutPassword });
   } catch (error) {
     if (error instanceof Error) {
       logError({
@@ -78,12 +102,19 @@ export const createAgent = async (req: Request, res: Response)=> {
       "INTERNAL SERVER ERROR",
       HttpStatusCode.HTTP_INTERNAL_SERVER_ERROR
     );
+
+    // res.status(500).json({ error: "INTERNAL SERVER ERROR" });
   }
 };
 
 export const agentLogin = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
+
+    if(!email || !password){
+      res.status(400).json({message:"Email and Password are required!"});
+      throw new Error("Missing required Parameters")
+    }
 
     const agent = await prisma.agent.findUnique({
       where: { email },
@@ -98,7 +129,10 @@ export const agentLogin = async (req: Request, res: Response) => {
       );
     }
 
-    const isPasswordCorrect = Helper.correctPassword(password, agent?.password || "");
+    const isPasswordCorrect = Helper.correctPassword(
+      password,
+      agent?.password || ""
+    );
 
     if (!isPasswordCorrect) {
       errorResponse.sendErrorResponse(
@@ -112,6 +146,7 @@ export const agentLogin = async (req: Request, res: Response) => {
     const token = Helper.signToken({ id: agent?.id, email: agent?.email });
 
     info({ message: "Agent authenticated" });
+    console.log("Agent authenticated", agent?.name)
     successResponse.sendSuccessResponse(
       res,
       {

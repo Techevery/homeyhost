@@ -5,7 +5,7 @@ import AdminRoutes from "./admin.routes"
 
 const router = Router();
 
-router.use("/auth", AuthRoutes.route);
-router.use("/admin", AdminRoutes.route);
+router.use("/auth", AuthRoutes);
+router.use("/admin", AdminRoutes);
 
 export default router;

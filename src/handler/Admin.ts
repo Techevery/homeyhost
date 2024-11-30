@@ -4,6 +4,7 @@ import { info, error as logError } from "../helpers/logger";
 import { SuccessResponse, ErrorResponse } from "../helpers/customResponse";
 import HttpStatusCode from "../helpers/httpResponse";
 import Helper from "../helpers";
+import multer from "multer";
 
 const successResponse = new SuccessResponse();
 const errorResponse = new ErrorResponse();
@@ -13,6 +14,9 @@ type RequestHandler = (req: Request, res: Response) => Promise<Response>;
 export const createAdminProfile = async (req: Request, res: Response) => {
   try {
     const { name, email, password, address, gender } = req.body;
+
+    if (!name || !email || !password || !address || !gender)
+      throw new Error("Missing Required parameters");
 
     const hashedPassword = Helper.hash(password);
 
@@ -54,6 +58,11 @@ export const adminLogin = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
+    if (!email || !password) {
+      res.status(400).json({ message: "email and password are required!" });
+      throw new Error("Missing Required Parameters");
+    }
+
     const admin = await prisma.admin.findUnique({
       where: { email },
     });
@@ -83,7 +92,7 @@ export const adminLogin = async (req: Request, res: Response) => {
 
     const token = Helper.signToken({ id: admin?.id, email: admin?.email });
 
-    info({ message: "Admin authenticated" });
+    console.log("Authenticated Admin: ", admin?.name);
     successResponse.sendSuccessResponse(
       res,
       {
@@ -172,6 +181,23 @@ export const createApartment = async (req: Request, res: Response) => {
 
 export const verifyAgent = async (req: Request, res: Response) => {
   try {
+    const adminId = (req as any).admin?.id;
+
+    if (!adminId) throw new Error("Admin need to be authenticated");
+
+    const admin = await prisma.admin.findUnique({
+      where: { id: adminId },
+    });
+
+    if (!admin) {
+      errorResponse.sendErrorResponse(
+        res,
+        null,
+        "FORBIDBEN ACCESS",
+        HttpStatusCode.HTTP_FORBIDDEN
+      );
+    }
+
     const { agentId, status } = req.body;
 
     if (!agentId || !status) {
@@ -192,7 +218,7 @@ export const verifyAgent = async (req: Request, res: Response) => {
       );
     }
 
-    const agent = await prisma.agent.findUnique({
+    const agent = await prisma.agent.findFirstOrThrow({
       where: { id: agentId },
     });
 
@@ -210,11 +236,15 @@ export const verifyAgent = async (req: Request, res: Response) => {
       data: { status },
     });
 
-    info({ message: `Agent ${agentId} verified` });
+    console.log("Agent ID", agentId);
 
     successResponse.sendSuccessResponse(
       res,
-      updateProfile,
+      {
+        "agent name": updateProfile.name,
+        agentId: updateProfile.id,
+        status: updateProfile.status,
+      },
       "Agent Status Updated",
       HttpStatusCode.HTTP_OK
     );
@@ -307,6 +337,59 @@ export const listProperties = async (req: Request, res: Response) => {
       null,
       "INTERNAL SERVER ERROR",
       HttpStatusCode.HTTP_INTERNAL_SERVER_ERROR
+    );
+  }
+};
+
+export const listAgents = async (req: Request, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const pageSize = parseInt(req.query.pageSize as string) || 10;
+
+    const skip = (page - 1) * pageSize;
+
+    const agents = await prisma.agent.findMany({
+      skip,
+      take: pageSize,
+    });
+
+    const agentDataWithoutPassword = agents.map(({password, ...rest}) => rest);
+
+
+    const totalCount = await prisma.agent.count();
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    successResponse.sendSuccessResponse(
+      res,
+      {
+        agentDataWithoutPassword,
+        pagination: {
+          totalAgents: totalCount,
+          totalPages,
+          currentPage: page,
+          itemsPerPage: pageSize,
+        },
+      },
+      "Agents onboarded",
+      HttpStatusCode.HTTP_OK
+    );
+  } catch (error) {
+    if (error instanceof Error) {
+      logError({
+        message: "Error getting properties",
+        params: {
+          name: error.name,
+          messages: error.message,
+          stack: error.stack,
+        },
+      });
+    }
+
+    errorResponse.sendErrorResponse(
+      res,
+      null,
+      "INTERNAL SERVER ERROR",
+      HttpStatusCode.HTTP_OK
     );
   }
 };

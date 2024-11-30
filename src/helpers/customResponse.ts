@@ -7,6 +7,7 @@ class SuccessResponse {
     message: string,
     statusCode: number
   ) {
+    if (res.headersSent) return;
     const finalStatusCode = statusCode !== undefined ? statusCode : 200;
     return res.status(finalStatusCode).json({
       status: "success",
@@ -24,6 +25,7 @@ class ErrorResponse {
     message: string,
     statusCode: number
   ) {
+    if (res.headersSent) return;
     const finalstatusCode = statusCode !== undefined ? statusCode : 500;
     return res.status(finalstatusCode).json({
       status: "error",

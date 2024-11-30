@@ -7,6 +7,10 @@ declare global {
         id: number;
         email: string;
       };
+      agent?: {
+        id: number;
+        email: string;
+      };
     }
   }
 }
